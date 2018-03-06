@@ -1,0 +1,142 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage{xspace}
+\usepackage{hyperref}
+\newcommand{\todo}[1]{$\langle\!\langle$\marginpar[\raggedleft$\triangleright\triangleright\triangleright$]{$\triangleleft\triangleleft\triangleleft$}\textsf{#1}$\rangle\!\rangle$}
+\def\CC{{C\nolinebreak[4]\hspace{-.05em}\raisebox{.4ex}{\tiny\bf ++}}}
+
+\usepackage{color}
+
+\begin{document}
+	
+% paper title
+\title{\textsc{Sparrow+CP3} and \textsc{SparrowToRiss}}
+
+% author names and affiliations
+% use a multiple column layout for up to three different
+% affiliations
+
+\author{
+\IEEEauthorblockN{Adrian Balint}
+\IEEEauthorblockA{Universit{\"a}t Ulm, Germany}
+\and
+\IEEEauthorblockN{Norbert Manthey}
+\IEEEauthorblockA{Knowledge Representation and Reasoning,\\TU Dresden, Germany}
+% \and
+% \IEEEauthorblockN{James Kirk\\ and Montgomery Scott}
+% \IEEEauthorblockA{Starfleet Academy\\
+%   San Francisco, CA, USA}
+}
+
+% conference papers do not typically use \thanks and this command
+% is locked out in conference mode. If really needed, such as for
+% the acknowledgment of grants, issue a \IEEEoverridecommandlockouts
+% after \documentclass
+
+% use for special paper notices
+%\IEEEspecialpapernotice{(Invited Paper)}
+
+\def\cp{\textsc{Coprocessor}\xspace}
+\def\cpt{\textsc{CP3}\xspace}
+\def\glucose{\textsc{Glucose~2.2}\xspace}
+\def\minisat{\textsc{Minisat~2.2}\xspace}
+\def\riss{\textsc{Riss3g}\xspace}
+\def\sparrow{\textsc{Sparrow}\xspace}
+\def\scp{\textsc{Sparrow+CP3}\xspace}
+\def\str{\textsc{SparrowToRiss}\xspace}
+
+\definecolor{midgrey}{rgb}{0.5,0.5,0.5}
+\definecolor{darkred}{rgb}{0.7,0.1,0.1}
+\newcommand{\nnote}[1]{$[$\textcolor{darkred}{norbert}:~~\emph{\textcolor{midgrey}{#1}}$]$}
+
+\maketitle
+
+% the abstract is optional
+\begin{abstract}
+\scp and \str are using as a first step the preprocessor \cpt to simplify the formula in a way that is beneficial for SLS solvers. 
+\scp then uses the solver \sparrow to solve the simplified problem.
+\str is first trying to solve the problem with Sparrow, limiting its execution to $5\cdot10^8$ flips and then passes the assignment found to the CDCL solver \riss, which uses this information for initialization and then tries to solve the problem.
+The solver \textsc{riss3g} combines the improved Minisat-style solving engine of \glucose with a state-of-the-art preprocessor \textsc{Coprocessor} and adds further modifications to the search process.
+The SLS solver \sparrow is an improved version of \sparrow2011
+\end{abstract}
+
+\section{Introduction}
+SLS solvers showed remarkable performance on the satisfiable crafted problems in the competitions from the last years. 
+Motivated by this results we have analyzed in ~\cite{bm-pos-2013} the utility of different preprocessing techniques for the SLS solver \sparrow. 
+The best found technique together with \sparrow represents the basis of our solver \scp.
+
+As \sparrow is not able to prove the unsatisfiability of a problem we have decided to append a CDCL solver to \scp, namely \riss after limiting the execution of \sparrow to $5\cdot10^8$ flips. 
+The CDCL solver \riss uses the \textsc{Minisat} search engine~\cite{DBLP:conf/sat/EenS03}, more specifically the extensions added in \glucose~\cite{lbd,Audemard:2012:RRS:2405292.2405308}. 
+Furthermore, \riss is equipped with the preprocessor \textsc{Coprocessor}(\cpt)~\cite{Manthey:2012:CFC:2352219.2352264}, that implements most of the recently published formula simplification techniques, ready to be used as inprocessing as well. 
+
+%The combination of both solvers, \str, first executes \cpt to simplify the formula for the SLS solver \sparrow, which is then executed for a limited amount of $XYZ$ flips. If no solution is found within this limit, \riss processes the input formula.
+
+\section{Main Techniques}
+
+\sparrow is a clause weighting SLS solvers that uses promising variables and probability distribution based selection heuristics. It is described in detail in \cite{Balint:2010:ISL:2164073.2164078}. Compared to the original version, the one submitted here is updating weights of unsatisfied clauses in every step where no promising variable can be found. 
+
+The built-in preprocessor \cpt has been ported from \textsc{Coprocessor 2} and supports the following simplification techniques:
+Unit Propagation, Subsumption, Strengthening (also called self-subsuming resolution) -- where for small clauses all subsuming resolvents can be produced, 
+{(Bounded) Variable Elimination} ({BVE})~\cite{Een:2005:EPS:2129929.2129935} combined with Blocked Clause Elimination (BCE)~\cite{Jarvisalo:2010:BCE:2175554.2175567}, 
+{(Bounded) Variable Addition} ({BVA})~\cite{bva}, 
+{Probing}~\cite{probing}, 
+{Covered Clause Elimination}~\cite{DBLP:journals/corr/abs-1011-5202}, 
+{Hidden Tautology Elimination}~\cite{Heule:2010:CEP:1928380.1928406}, 
+{Equivalent Literal Elimination}~\cite{ee-withSCC}, 
+{Unhiding} ({Unhide})~\cite{Heule:2011:ECS:2023474.2023497}, 
+{Add Binary Resolvents}~\cite{Wei:2002:ARW:647489.727142}, 
+at-most-one rewriting~\cite{ms-cspsat-2011,hau-encoding}, 
+a 2SAT algorithm~\cite{DBLP:conf/aaai/Val00}, and a walksat implementation~\cite{DBLP:conf/aaai/SelmanKC94}. 
+The preprocessor furthermore supports parallel subsumption, strengthening and variable elimination, which is described in~\cite{gm-pos-2013}. 
+
+\riss uses \glucose as main search engine -- the version used in \str just replaces the internal preprocessor with \cpt. 
+
+The combination of the \sparrow and \riss, called \str, does not simply execute the two solvers after each other, but also forwards information from the SLS solver to the CDCL solver: 
+when \sparrow terminates, it outputs its last full assignment in chronological order (i.e. the oldest variable first), which is used to initialize the phase saving of \riss, such that the first decisions of \riss follow this assignment. 
+In a brief empirical evaluation this communication turned out to be useful. 
+The solvers are also able to forward the information about the age of the variables in the SLS search. This data could be used to initialize the activities of the variables inside \riss. 
+However, this feature is not enabled in the used configuration. 
+
+\section{Main Parameters}
+\sparrow is using the same parameters as \sparrow 2011. 
+
+The configuration of \cpt has been tuned for \sparrow in~\cite{bm-pos-2013} on the SAT Challenge 2012 satisfiable hard combinatorial benchmarks.
+
+
+The main parameters of \riss control how the formula simplification of \cpt is executed. 
+The configuration of \cpt has been tuned for \glucose in~\cite{bm-pos-2013} on the SAT Challenge 2012 application benchmark. 
+The final setup of the preprocessor inside \riss uses the following techniques:
+%
+UP, SUB+STR (producing all resolvents for ternary clauses), Unhide without \emph{hidden literal elimination}~\cite{Heule:2011:ECS:2023474.2023497} and 5 iterations, 
+BVE without on the fly BCE and BVA with a small number of $120000$ steps.
+
+For \str it can be chosen whether to forward the last assignment, or the activity information. 
+
+% \section{Special Algorithms, Data Structures, and Other Features}
+% 
+% \nnote{Nothing, simple script that executes the two solvers / single solver}
+
+\section{Implementation details}
+
+\sparrow is implemented in C.
+%
+The solver \riss is build on top of \minisat and \glucose. Furthermore, we integrated \cp into the system, allowing inprocessing techniques to be executed during search -- however, this feature is not used in the competition. 
+%
+All solvers have been compiled with the GCC \CC compiler as  64\,bit binaries.
+ 
+\section{Availability}
+
+The source code of \riss (including \cpt) is available at \url{tools.computational-logic.org} for research purposes. 
+
+\section*{Acknowledgment}
+The authors would like to thank Armin Biere for many helpful discussions on formula simplification and the BWGrid \cite{bwgrid} project for providing computational resources to tune \cpt. 
+This project was partially funded by the Deutsche Forschungsgemeinschaft (DFG) under the number SCHO 302/9-1.
+Finally, the authors would like to thank TU Dresden for providing the computational resources to develop, test and evaluate \riss.
+
+
+\bibliographystyle{IEEEtran}
+\bibliography{sc2013}
+
+\end{document}
+
+
