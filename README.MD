@@ -13,7 +13,9 @@ make
 ## Using the solver
 
 Usage of sparrow:
+```
 ./sparrow [options] <DIMACS CNF instance> [<seed>]
+```
 
 Sparrow options:
 --c1 <double_value> : c1 constant from the Sparrow heuristic (default: 3sat:2.15; 5sat:2.855; 7sat:6.5)  
