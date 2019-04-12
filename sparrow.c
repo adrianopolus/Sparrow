@@ -32,8 +32,8 @@
 
 //using namespace std; //g++
 
-#define MAXCLAUSELENGTH 10000 //maximum number of literals per clause
-#define STOREBLOCK  20000
+#define MAXCLAUSELENGTH 20000 //maximum number of literals per clause
+#define STOREBLOCK  200000
 
 # undef LLONG_MAX
 #define LLONG_MAX  9223372036854775807
@@ -188,7 +188,7 @@ int luby() {
 /**-----luby sequence------*/
 
 int cpu_lim = -1;
-inline void setCpuLimit() {
+void setCpuLimit() {
 	if (cpu_lim != -1) {
 		struct rlimit rl;
 		getrlimit(RLIMIT_CPU, &rl);
@@ -259,7 +259,7 @@ void printSolverParameters() {
 	fflush(stderr);
 }
 
-inline void printSolution() {
+void printSolution() {
 	register int i;
 	printf("v ");
 	for (i = 1; i <= numVars; i++) {
@@ -308,7 +308,7 @@ void printEndStatistics() {
 
 }
 
-inline void printStatsEndFlip() {
+void printStatsEndFlip() {
 	if (numFalse < bestNumFalse) {
 		//fprintf(stderr, "%8lli numFalse: %5d\n", flip, numFalse);
 		bestNumFalse = numFalse;
@@ -630,7 +630,7 @@ int  checkAssignment() {
 	return 1;
 }
 
-inline void  smooth2() { //for all weighted !!!satisfied!!! clauses decrease the score by 1
+void  smooth2() { //for all weighted !!!satisfied!!! clauses decrease the score by 1
 	register int i, c, var;
 	for (i = 0; i < numWeight; i++) {
 		c = weightedClause[i];
@@ -657,7 +657,7 @@ inline void  smooth2() { //for all weighted !!!satisfied!!! clauses decrease the
 	statNumSmooth++;
 }
 
-inline void  updateWeights() { //for all unsat clauses increase the weight by 1.
+void  updateWeights() { //for all unsat clauses increase the weight by 1.
 	statNumWeight++;
 	int i, j;
 	int c, var;
@@ -683,15 +683,15 @@ inline void  updateWeights() { //for all unsat clauses increase the weight by 1.
 }
 
 //pick a clause with the flip counter and not randomly
-static inline int  pickClauseRandom(){
+static int  pickClauseRandom(){
 	return rand() % numFalse;
 }
 
-static inline int pickClauseF(){
+static int pickClauseF(){
 	return flip % numFalse;
 }
 
-inline void pickVar() {
+void pickVar() {
 	register int i, j;
 	int var;
 	int bestScore = -numClauses;
@@ -777,7 +777,7 @@ inline void pickVar() {
 	return;
 }
 
-inline void flipAtom() {
+void flipAtom() {
 	int var;
 	int *ocptr; //occurrence pointer
 	int *clptr; //clause pointer
